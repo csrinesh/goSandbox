@@ -3,15 +3,18 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"image/color"
 	"log"
 	"os"
 
 	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/vg/draw"
 )
 
 type xy struct{ x, y float64 }
 
-func readData(path string) ([]xy, error) {
+func readData(path string) (plotter.XYs, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -19,7 +22,7 @@ func readData(path string) ([]xy, error) {
 
 	defer f.Close()
 
-	var xys []xy
+	var xys plotter.XYs
 
 	s := bufio.NewScanner(f)
 	for s.Scan() {
@@ -29,7 +32,7 @@ func readData(path string) ([]xy, error) {
 			log.Printf("Discd &q, %v", s.Text(), err)
 		}
 
-		xys = append(xys, xy{x, y})
+		xys = append(xys, struct{ X, Y float64 }{x, y})
 	}
 	if err := s.Err(); err != nil {
 		return nil, fmt.Errorf("cannot read: %v", err)
@@ -46,14 +49,13 @@ func main() {
 
 	_ = xys
 
-	err = plotData("out.png")
+	err = plotData("out.png", xys)
 	if err != nil {
 		log.Fatalf("Could not plot the graph %v", err)
 	}
-
 }
 
-func plotData(path string, xys []xy) error {
+func plotData(path string, xys plotter.XYs) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("could not create png")
@@ -64,18 +66,27 @@ func plotData(path string, xys []xy) error {
 		return fmt.Errorf("Cannot create plot funtion")
 	}
 
-	plotter
-	wt, err := p.WriterTo(512, 512, "png")
+	s, err := plotter.NewScatter(xys)
+
 	if err != nil {
-		return fmt.Errorf("Could not create a writer %v", err)
+		return fmt.Errorf("Could not create scatter: %s: %v", path, err)
+	}
+	s.GlyphStyle.Shape = draw.SquareGlyph{}
+	s.Color = color.RGBA{B: 255, A: 255}
+	s.Radius = 2
+	p.Add(s)
+
+	wt, err := p.WriterTo(256, 256, "png")
+	if err != nil {
+		return fmt.Errorf("Could not create a writer: %s: %v", path, err)
 	}
 	_, err = wt.WriteTo(f)
 	if err != nil {
-		return fmt.Errorf("Could not write to out.png: %v", err)
+		return fmt.Errorf("Could not write to %s: %v", path, err)
 	}
 
 	if err := f.Close(); err != nil {
 		return fmt.Errorf("Could not close another png: %v", err)
 	}
-
+	return nil
 }
