@@ -1,4 +1,4 @@
-package main
+package mandelbroth
 
 import (
 	"fmt"
@@ -6,16 +6,17 @@ import (
 	"image/color"
 	"log"
 	"os"
+	"time"
 
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot"
 )
 
 var (
-	n  int = 1000
+	n  int = 100
 	xvalues []float64
 	yvalues []float64
-	maxiter int = 1000
+	maxiter int = 100
 )
 
 func makeRange(min , max int) []int {
@@ -37,15 +38,9 @@ func makeArange(min float64, max float64, step int) []float64 {
     return a
 }
 
-func main() {
-	xvalues := makeArange(-2,2, n)
-	yvalues := makeArange(-2,2, n)
-	nrange := makeRange(0,100)
-	
-	fmt.Println("The main starts here ....")
+func loopArray(xvalues, yvalues []float64, nrange []int) (plotter.XYs){
 	
 	var xys plotter.XYs
-
 	for _, x:= range xvalues {
 		for _, y:= range yvalues{
 			var z complex128 
@@ -54,15 +49,31 @@ func main() {
 				z = z*z + c
 				if cmplx.Abs(z) > 2.0 {
 					xys = append(xys, struct{ X, Y float64 }{real(c), imag(c)})
+					break
 				}
 			}
 		}					
-	}	
+	}
+	return xys
+}
+func mandelbroth() {
+	start := time.Now()
+
+	xvalues := makeArange(-2,2, n)
+	yvalues := makeArange(-2,2, n)
+	nrange := makeRange(0,100)
+	
+	xys := loopArray(xvalues, yvalues, nrange)
+
+	fmt.Println("The main starts here ....")
+	
 	err := plotData("mandelbroth.png", xys)
 	if err != nil {
 		log.Fatalf("Could not plot the graph %v", err)
 	}
-	fmt.Println("The main ends here ....")
+	t := time.Now()
+	elapsed := t.Sub(start)
+	fmt.Println("The main ends here .... and the total time elapsed is:", elapsed)
 }
 
 func plotData(path string, xys plotter.XYs) error {
